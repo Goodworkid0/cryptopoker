@@ -1,0 +1,475 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  username      String    @unique
+  passwordHash  String?
+  walletAddress String?   @unique
+  avatar        String?
+  
+  // Stats
+  level         Int       @default(1)
+  experience    Int       @default(0)
+  vipTier       VipTier   @default(BRONZE)
+  
+  // Flags
+  isVerified    Boolean   @default(false)
+  isBanned      Boolean   @default(false)
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations
+  wallet        Wallet?
+  sessions      Session[]
+  gameHistory   GamePlayer[]
+  transactions  Transaction[]
+  achievements  UserAchievement[]
+  rewards       Reward[]
+  referrals     Referral[]    @relation("Referrer")
+  referredBy    Referral?     @relation("Referred")
+  
+  @@index([walletAddress])
+  @@index([email])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  userAgent   String?
+  ipAddress   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+enum VipTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+// ==================== WALLET & TRANSACTIONS ====================
+
+model Wallet {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Balances
+  balance         Decimal  @default(0) @db.Decimal(36, 18)
+  lockedBalance   Decimal  @default(0) @db.Decimal(36, 18) // In-game locked
+  stakingBalance  Decimal  @default(0) @db.Decimal(36, 18)
+  
+  // Stats
+  totalDeposited  Decimal  @default(0) @db.Decimal(36, 18)
+  totalWithdrawn  Decimal  @default(0) @db.Decimal(36, 18)
+  totalWon        Decimal  @default(0) @db.Decimal(36, 18)
+  totalLost       Decimal  @default(0) @db.Decimal(36, 18)
+  totalRakePaid   Decimal  @default(0) @db.Decimal(36, 18)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id])
+  
+  type          TransactionType
+  status        TransactionStatus @default(PENDING)
+  amount        Decimal           @db.Decimal(36, 18)
+  fee           Decimal           @default(0) @db.Decimal(36, 18)
+  
+  // Blockchain data
+  txHash        String?
+  blockNumber   Int?
+  fromAddress   String?
+  toAddress     String?
+  
+  // Metadata
+  description   String?
+  metadata      Json?
+  
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  completedAt   DateTime?
+  
+  @@index([userId])
+  @@index([txHash])
+  @@index([type, status])
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  GAME_BUY_IN
+  GAME_PAYOUT
+  TOURNAMENT_BUY_IN
+  TOURNAMENT_PAYOUT
+  RAKE
+  REWARD
+  REFERRAL_BONUS
+  STAKING_DEPOSIT
+  STAKING_WITHDRAW
+  STAKING_REWARD
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ==================== POKER GAMES ====================
+
+model Table {
+  id            String      @id @default(cuid())
+  name          String
+  type          GameType    @default(TEXAS_HOLDEM)
+  
+  // Stakes
+  smallBlind    Decimal     @db.Decimal(36, 18)
+  bigBlind      Decimal     @db.Decimal(36, 18)
+  minBuyIn      Decimal     @db.Decimal(36, 18)
+  maxBuyIn      Decimal     @db.Decimal(36, 18)
+  
+  // Settings
+  maxPlayers    Int         @default(9)
+  isPrivate     Boolean     @default(false)
+  password      String?
+  
+  // Status
+  status        TableStatus @default(WAITING)
+  currentPlayers Int        @default(0)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  games         Game[]
+  
+  @@index([status])
+  @@index([type])
+}
+
+model Game {
+  id            String       @id @default(cuid())
+  tableId       String
+  table         Table        @relation(fields: [tableId], references: [id])
+  
+  // Game state
+  status        GameStatus   @default(WAITING)
+  currentRound  PokerRound?
+  pot           Decimal      @default(0) @db.Decimal(36, 18)
+  rake          Decimal      @default(0) @db.Decimal(36, 18)
+  
+  // Cards
+  communityCards String[]    @default([])
+  
+  // Positions
+  dealerSeat    Int          @default(0)
+  currentSeat   Int?
+  
+  // Timestamps
+  startedAt     DateTime?
+  endedAt       DateTime?
+  createdAt     DateTime     @default(now())
+  
+  players       GamePlayer[]
+  actions       GameAction[]
+  
+  @@index([tableId])
+  @@index([status])
+}
+
+model GamePlayer {
+  id            String   @id @default(cuid())
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  // Position & Stack
+  seatNumber    Int
+  stackSize     Decimal  @db.Decimal(36, 18)
+  currentBet    Decimal  @default(0) @db.Decimal(36, 18)
+  
+  // Cards
+  holeCards     String[] @default([])
+  
+  // Status
+  isActive      Boolean  @default(true)
+  isFolded      Boolean  @default(false)
+  isAllIn       Boolean  @default(false)
+  
+  // Results
+  winnings      Decimal  @default(0) @db.Decimal(36, 18)
+  handRank      String?
+  
+  createdAt     DateTime @default(now())
+  
+  @@unique([gameId, seatNumber])
+  @@unique([gameId, userId])
+  @@index([userId])
+}
+
+model GameAction {
+  id          String     @id @default(cuid())
+  gameId      String
+  game        Game       @relation(fields: [gameId], references: [id])
+  
+  playerId    String
+  action      PokerAction
+  amount      Decimal?   @db.Decimal(36, 18)
+  round       PokerRound
+  
+  createdAt   DateTime   @default(now())
+  
+  @@index([gameId])
+}
+
+enum GameType {
+  TEXAS_HOLDEM
+  OMAHA
+  OMAHA_HI_LO
+}
+
+enum TableStatus {
+  WAITING
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum GameStatus {
+  WAITING
+  DEALING
+  PREFLOP
+  FLOP
+  TURN
+  RIVER
+  SHOWDOWN
+  FINISHED
+}
+
+enum PokerRound {
+  PREFLOP
+  FLOP
+  TURN
+  RIVER
+}
+
+enum PokerAction {
+  FOLD
+  CHECK
+  CALL
+  BET
+  RAISE
+  ALL_IN
+  SMALL_BLIND
+  BIG_BLIND
+}
+
+// ==================== TOURNAMENTS ====================
+
+model Tournament {
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  type            TournamentType
+  status          TournamentStatus  @default(REGISTERING)
+  
+  // Buy-in
+  buyIn           Decimal           @db.Decimal(36, 18)
+  entryFee        Decimal           @default(0) @db.Decimal(36, 18)
+  rebuyAllowed    Boolean           @default(false)
+  rebuyCount      Int               @default(0)
+  
+  // Structure
+  startingChips   Int
+  blindStructure  Json              // Array of blind levels
+  levelDuration   Int               // Minutes per level
+  
+  // Players
+  minPlayers      Int               @default(2)
+  maxPlayers      Int
+  currentPlayers  Int               @default(0)
+  
+  // Prize
+  prizePool       Decimal           @default(0) @db.Decimal(36, 18)
+  prizeStructure  Json              // Payout percentages
+  
+  // Schedule
+  scheduledStart  DateTime
+  lateRegMinutes  Int               @default(60)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  participants    TournamentPlayer[]
+  
+  @@index([status])
+  @@index([scheduledStart])
+}
+
+model TournamentPlayer {
+  id            String     @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  
+  userId        String
+  chips         Int
+  position      Int?       // Final position
+  prize         Decimal?   @db.Decimal(36, 18)
+  
+  isEliminated  Boolean    @default(false)
+  eliminatedAt  DateTime?
+  rebuys        Int        @default(0)
+  
+  registeredAt  DateTime   @default(now())
+  
+  @@unique([tournamentId, userId])
+  @@index([tournamentId])
+}
+
+enum TournamentType {
+  SIT_N_GO
+  MTT
+  FREEROLL
+  SATELLITE
+}
+
+enum TournamentStatus {
+  REGISTERING
+  STARTING
+  RUNNING
+  FINAL_TABLE
+  FINISHED
+  CANCELLED
+}
+
+// ==================== REWARDS & ACHIEVEMENTS ====================
+
+model Achievement {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  name        String
+  description String
+  icon        String?
+  
+  // Requirements
+  type        AchievementType
+  target      Int                // Target value to achieve
+  reward      Decimal            @db.Decimal(36, 18)
+  
+  createdAt   DateTime           @default(now())
+  
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  
+  progress      Int         @default(0)
+  isCompleted   Boolean     @default(false)
+  completedAt   DateTime?
+  rewardClaimed Boolean     @default(false)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@unique([userId, achievementId])
+}
+
+model Reward {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  
+  type        RewardType
+  amount      Decimal     @db.Decimal(36, 18)
+  description String?
+  
+  isClaimed   Boolean     @default(false)
+  claimedAt   DateTime?
+  expiresAt   DateTime?
+  
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([type])
+}
+
+enum AchievementType {
+  HANDS_PLAYED
+  HANDS_WON
+  TOURNAMENTS_PLAYED
+  TOURNAMENTS_WON
+  TOTAL_WINNINGS
+  ROYAL_FLUSH
+  STRAIGHT_FLUSH
+  FOUR_OF_A_KIND
+  FULL_HOUSE
+  CONSECUTIVE_WINS
+  LOGIN_STREAK
+}
+
+enum RewardType {
+  DAILY_BONUS
+  WEEKLY_BONUS
+  ACHIEVEMENT
+  RAKEBACK
+  LEADERBOARD
+  REFERRAL
+  PROMOTION
+  VIP_REWARD
+}
+
+// ==================== REFERRALS ====================
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  referrer      User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredId    String   @unique
+  referred      User     @relation("Referred", fields: [referredId], references: [id])
+  
+  code          String
+  
+  // Earnings
+  referrerBonus Decimal  @default(0) @db.Decimal(36, 18)
+  referredBonus Decimal  @default(0) @db.Decimal(36, 18)
+  
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  
+  @@index([referrerId])
+  @@index([code])
+}

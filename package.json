@@ -1,0 +1,30 @@
+{
+  "name": "cryptopoker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CryptoPoker - Online poker platform with native cryptocurrency",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:migrate": "pnpm --filter @cryptopoker/api db:migrate",
+    "db:seed": "pnpm --filter @cryptopoker/api db:seed",
+    "contracts:compile": "pnpm --filter @cryptopoker/contracts compile",
+    "contracts:deploy": "pnpm --filter @cryptopoker/contracts deploy"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

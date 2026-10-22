@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  * {
+    @apply border-border-primary;
+  }
+  
+  body {
+    @apply bg-background-primary text-text-primary font-sans antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background-secondary;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-secondary rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-accent-secondary;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 inline-flex items-center justify-center gap-2;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-accent text-background-primary hover:shadow-glow active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-background-tertiary text-text-primary border border-border-secondary hover:border-accent-primary hover:text-accent-primary;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-text-secondary hover:text-text-primary hover:bg-background-hover;
+  }
+
+  .card {
+    @apply bg-background-card rounded-2xl border border-border-primary p-6 shadow-card;
+  }
+
+  .card-hover {
+    @apply card hover:border-accent-primary/30 hover:shadow-glow transition-all duration-300;
+  }
+
+  .input {
+    @apply w-full px-4 py-3 bg-background-secondary border border-border-secondary rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/30 transition-all;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-accent-primary/20 text-accent-primary;
+  }
+
+  .badge-warning {
+    @apply badge bg-accent-orange/20 text-accent-orange;
+  }
+
+  .badge-gold {
+    @apply badge bg-accent-gold/20 text-accent-gold;
+  }
+
+  .glass {
+    @apply bg-background-card/80 backdrop-blur-xl border border-white/10;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-accent bg-clip-text text-transparent;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-gold bg-clip-text text-transparent;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+  }
+
+  /* Poker table felt texture */
+  .poker-felt {
+    background: 
+      radial-gradient(ellipse at center, #1a7a4c 0%, #0d5c36 70%, #094028 100%);
+    box-shadow: 
+      inset 0 0 100px rgba(0, 0, 0, 0.4),
+      0 0 50px rgba(0, 255, 136, 0.1);
+  }
+
+  /* Playing card styles */
+  .playing-card {
+    @apply relative bg-white rounded-lg shadow-card overflow-hidden;
+    aspect-ratio: 2.5/3.5;
+  }
+
+  .playing-card.red {
+    @apply text-suits-hearts;
+  }
+
+  .playing-card.black {
+    @apply text-suits-spades;
+  }
+
+  /* Chip styles */
+  .chip {
+    @apply w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm border-4 shadow-lg;
+  }
+
+  .chip-gold {
+    @apply bg-gradient-gold border-amber-600 text-amber-900;
+  }
+
+  .chip-green {
+    @apply bg-gradient-accent border-emerald-600 text-emerald-900;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
