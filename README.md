@@ -2,7 +2,7 @@
 
 Multiplayer poker and wallet integration prototype with smart-contract experiments.
 
-Solo-developed by [Vojislav Beric](https://github.com/Smileyface101).
+Solo-developed by [Vojislav Beric](https://github.com/Goodworkid0).
 
 ## What it does
 
